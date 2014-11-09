@@ -1,0 +1,34 @@
+/*****************
+* Maja Zalewska  *
+* nr 336088		 *  
+* Zadanie 1		 *
+*****************/
+
+Opis protokołu komunikacji
+
+Proces Pascal tworzy dwa pipe'y oraz pierwszy porces w. Kolejne procesy w tworzone są już przez procesy w.
+W każdym obrocie pętli, aż do przedostatniego, ostatni, w danym obrocie, proces w wywołuje fork.
+Do komunikacji "wstecznej", czyli w kierunku do Pascala, służą STDIN i STDOUT, które są odpowiednio duplikowane w procesie potomnym.
+Natomiast do komunikacji "do przodu", czyli od Pascala, służą pozostałe dwa deskryptory utworzonych pipe'ów.
+To samo zduplikowanie i przypisanie deskryptorów zachodzi w procesach w. 
+
+Komunikacja zasadniczo dzieli się na dwa etapy:
+	1) do momentu, gdy Pascal jeszcze nie wysłał flagi END_CALC
+	2) w momencie, gdy Pascal wysyła flagę END_CALC - ostatni obrót pętli - zaangażowanych jest n procesów w.
+Każdy pojedynczy przesyłany komunikat jest postaci [state] [wartość].
+
+Ad 1.
+Pascal wysyła na początku komunikat z flagą RUN_CALC. W przedostanim obrocie zmienia ją na LAST_TO_FORK, a w ostatnim na END_CALC.
+Jako wartość zawsze wysyła 0.
+Procesy w przsyłają natomiast do potomków flagę, jaką otrzymały od procesu macierzystego, oraz swoją wartość z poprzedniego obrotu pętli, 
+jak jest w treści zadania.
+Proces potomny przekazuje do procesu macierzystego wiadomość, którą wysłał ostatni w danym obrocie pętli proces, czyli [state] 1.
+Ten komunikat wysyłany jest jedynie po to, by Pascal wiedział, kiedy przejść do kolejnego obrotu pętli.
+
+Ad 2.
+Pascal wysyła komunikat END_CALC 0. W pętli nie wykonuje już read, bo jest to ostatni n-ty krok, więc teraz będzie czekał w kolejnej pętli
+na n kolejnych komunikatów z wyliczonymi wartościami od procesów w.
+Proces w przesyla do swojego procesu potomnego taki sam komunikat, jak w ad 1, tylko z flagą END_CALC. W tym momencie proces w(i) wie, że będzie oczekiwać
+na i komunikatów od procesów potomnych, które musi przesłać wyżej. Kończy, gdy otrzyma komunikat od ostatniego procesu (opis niżej).
+W momencie, gdy ostatni (n-ty) proces w odczytuje wiadomośc od procesu w(n-1), zmienia flagę na SEND_ALL_BACK i wysyła komunikat 
+SEND_ALL_BACK 1. 
